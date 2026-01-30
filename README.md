@@ -3,9 +3,8 @@
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/Tan-zhen-yu/bookRecSys?color=orange&logo=github)
 ![Java](https://img.shields.io/badge/Java-17-blue?logo=openjdk)
 ![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
-![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey)
 
-> **🔥 快速体验**：[![Download Zip](https://img.shields.io/badge/立即下载-v1.0.0_一键运行包-brightgreen?style=for-the-badge&logo=windows)](https://github.com/Tan-zhen-yu/bookRecSys/releases/download/v1.0.0/BookRecSys_v1.0_Windows.zip)
+> **🚀 极速体验**：[![Download Zip](https://img.shields.io/badge/立即下载-v1.0.0_一键运行包-brightgreen?style=for-the-badge&logo=windows)](https://github.com/Tan-zhen-yu/bookRecSys/releases/download/v1.0.0/Releasev1.0.zip)
 >
 > *(注：下载后解压，确保 MySQL 已启动并导入 sql，双击「一键启动.bat」即可自动运行)*
 
