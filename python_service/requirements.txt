@@ -1,0 +1,7 @@
+flask
+pandas
+numpy
+scikit-learn
+pymysql
+sqlalchemy
+jieba==0.42.1

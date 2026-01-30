@@ -1,0 +1,14 @@
+# 前端过滤
+**/node_modules/
+**/dist/
+**/.local
+
+# 后端过滤
+**/target/
+**/.idea/
+**/.vscode/
+*.iml
+
+# 系统与日志
+.DS_Store
+*.log
