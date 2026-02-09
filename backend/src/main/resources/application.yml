@@ -10,7 +10,7 @@ spring:
     time-zone: GMT+8
   datasource:
     # 注意：冒号后面必须有一个空格！
-    url: jdbc:mysql://localhost:3306/book_rec_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/book_rec_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&rewriteBatchedStatements=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver

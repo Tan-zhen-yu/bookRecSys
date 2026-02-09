@@ -12,6 +12,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.Setter;
+import org.dromara.easyes.annotation.IndexId;
+import org.springframework.data.redis.core.index.Indexed;
 
 /**
  * <p>
@@ -77,6 +79,7 @@ public class BookInfo implements Serializable {
     @TableField("rating_count")
     private Integer ratingCount;
 
+    @IndexId
     @TableField("create_time")
     private LocalDateTime createTime;
 
@@ -86,4 +89,7 @@ public class BookInfo implements Serializable {
 
     @TableField(exist = false) // 告诉MP这个字段不在数据库表中
     private Integer matchScore;
+
+    @TableField("count")
+    private Integer count;
 }

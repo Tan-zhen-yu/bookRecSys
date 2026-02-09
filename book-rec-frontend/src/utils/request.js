@@ -1,5 +1,6 @@
 import axios from 'axios'
-
+// 在创建 axios 实例时或全局设置
+axios.defaults.withCredentials = true;
 const request = axios.create({
     // ✅ 修改为相对路径，由 Nginx 接管转发
     baseURL: '/api', 

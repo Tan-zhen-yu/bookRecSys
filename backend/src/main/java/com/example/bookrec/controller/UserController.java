@@ -1,6 +1,7 @@
 package com.example.bookrec.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.example.bookrec.common.JwtUtils;
 import com.example.bookrec.common.Result;
 import com.example.bookrec.entity.BookCategory;
 import com.example.bookrec.entity.BookInfo;
@@ -12,8 +13,11 @@ import com.example.bookrec.service.IUserBookRatingService;
 import com.example.bookrec.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +31,8 @@ public class UserController {
     private IUserService userService;
 
     // 在 UserController 中添加
-
+    @Autowired
+    private JwtUtils jwtUtils; // 注入JWT工具类
     @Autowired
     private IUserBookRatingService ratingService;
     @Autowired
@@ -98,9 +103,34 @@ public class UserController {
 
     // 登录接口: POST /user/login
     @PostMapping("/login")
-    public Result<User> login(@RequestBody User user) {
-        // 这里的User对象接收前端传来的JSON {username: "xxx", password: "xxx"}
+    public Result<User> login(@RequestBody User user, HttpServletResponse response) {
+        // 1. 业务登录逻辑 (保持不变)
+        // 如果登录失败，userService.login 通常会抛出异常或返回 null，请根据你的逻辑处理
         User loginUser = userService.login(user);
+
+        // ------------------- 新增逻辑开始 -------------------
+
+        // 2. 生成 JWT 字符串
+        // 这里的 createToken 方法需要你自己实现，通常传入 userId 或 username
+        String jwtToken = jwtUtils.createToken(loginUser.getId(), loginUser.getUsername());
+
+        // 3. 构建 HttpOnly Cookie
+        // 使用 Spring 提供的 ResponseCookie 工具，因为它能方便地设置 SameSite 属性
+        ResponseCookie cookie = ResponseCookie.from("auth_token", jwtToken) // cookie名称: auth_token
+                .httpOnly(true)       // 【关键】禁止前端 JS 读取，防御 XSS
+                .secure(false)        // 本地开发填 false，上线 HTTPS 后必须改为 true
+                .path("/")            // 允许全站访问
+                .maxAge(24 * 60 * 60) // Cookie 有效期（单位：秒），这里设为 24 小时
+                .sameSite("Strict")   // 【关键】防御 CSRF，Strict 模式下第三方链接无法携带 Cookie
+                .build();
+
+        // 4. 将 Cookie 加入响应头
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        // ------------------- 新增逻辑结束 -------------------
+
+        // 5. 返回用户信息 (注意：返回体中不再包含 Token，因为 Token 已经在 Cookie 里了)
+        // 为了安全，建议 loginUser 里不要包含 password 字段
         return Result.success(loginUser);
     }
 
