@@ -8,8 +8,22 @@ const request = axios.create({
 })
 
 // 请求拦截器
+// 请求拦截器
 request.interceptors.request.use(config => {
     config.headers['Content-Type'] = 'application/json;charset=utf-8';
+
+    // 1. 从 localStorage 拿到登录时保存的用户信息
+    const userJson = localStorage.getItem("user");
+    
+    if (userJson) {
+        const user = JSON.parse(userJson);
+        // 2. 检查是否有 token，如果有，塞进 Headers
+        // 注意：这里的键名 'token' 必须和 Java 拦截器里获取的键名一致
+        if (user.token) {
+            config.headers['token'] = user.token; 
+        }
+    }
+    
     return config
 }, error => {
     return Promise.reject(error)

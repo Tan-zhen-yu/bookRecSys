@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.example.bookrec.common.Result;
 import com.example.bookrec.entity.BookInfo;
 import com.example.bookrec.service.IBookInfoService;
+import com.example.bookrec.service.CacheService;
+import com.example.bookrec.service.BloomFilterService;
+import com.example.bookrec.resilience.CircuitBreakerAspect.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +20,12 @@ public class BookInfoController {
 
     @Autowired
     private IBookInfoService bookInfoService;
+
+    @Autowired
+    private CacheService cacheService;
+
+    @Autowired
+    private BloomFilterService bloomFilterService;
 
     /**
      * 图书分页列表 & 搜索筛选
@@ -57,12 +66,18 @@ public class BookInfoController {
     }
 
     /**
-     * 图书详情
+     * 图书详情 - 带完整缓存防护
      * GET /book/{id}
      */
     @GetMapping("/{id}")
     public Result<BookInfo> getDetail(@PathVariable Long id) {
-        BookInfo book = bookInfoService.getById(id);
+        // 1. 布隆过滤器预检查（防止缓存穿透）
+        if (!bloomFilterService.mightContain(id)) {
+            return Result.error("图书不存在");
+        }
+        
+        // 2. 使用击穿防护获取数据（防止缓存击穿）
+        BookInfo book = cacheService.getBookWithCacheBreakdownProtection(id);
         if (book == null) {
             return Result.error("图书不存在");
         }
@@ -72,41 +87,103 @@ public class BookInfoController {
     // 管理员添加图书 (简单版)
     @PostMapping("/save")
     public Result<Boolean> saveBook(@RequestBody BookInfo bookInfo) {
-        return Result.success(bookInfoService.saveOrUpdate(bookInfo));
+        boolean result = bookInfoService.saveOrUpdate(bookInfo);
+        if (result && bookInfo.getId() != null) {
+            // 添加到布隆过滤器
+            bloomFilterService.add(bookInfo.getId());
+            // 清除可能存在的缓存
+            cacheService.deleteBookCache(bookInfo.getId());
+        }
+        return Result.success(result);
     }
 
     @DeleteMapping("/{id}")
     public Result<Boolean> deleteBook(@PathVariable Long id) {
-        return Result.success(bookInfoService.removeById(id));
+        boolean result = bookInfoService.removeById(id);
+        if (result) {
+            // 从布隆过滤器中删除（实际需要重建）
+            bloomFilterService.delete(id);
+            // 清除缓存
+            cacheService.deleteBookCache(id);
+        }
+        return Result.success(result);
     }
 
     // BookInfoController.java
 
-    // 1. 高分榜 (Rating Avg 降序)
+    // 1. 高分榜 (Rating Avg 降序) - 带缓存
     @GetMapping("/rank/rating")
+    @CircuitBreaker(
+        key = "book_rating_rank", 
+        failureThreshold = 3, 
+        timeout = 30,
+        minRequestThreshold = 5
+    )
     public Result<List<BookInfo>> getRatingRank() {
+        String cacheKey = "book:rank:rating";
+        List<BookInfo> cachedResult = cacheService.getListFromCache(cacheKey, BookInfo.class);
+        if (cachedResult != null) {
+            return Result.success(cachedResult);
+        }
+        
         LambdaQueryWrapper<BookInfo> query = new LambdaQueryWrapper<>();
         query.ge(BookInfo::getRatingCount, 5) // 评分人数至少5人(防止只有1人打5分就排第一)
                 .orderByDesc(BookInfo::getRatingAvg)
                 .last("limit 10");
-        return Result.success(bookInfoService.list(query));
+        List<BookInfo> result = bookInfoService.list(query);
+        
+        // 缓存30分钟
+        cacheService.setListToCache(cacheKey, result, 30);
+        return Result.success(result);
     }
 
-    // 2. 热度榜 (Rating Count 降序)
+    // 2. 热度榜 (Rating Count 降序) - 带缓存
     @GetMapping("/rank/hot")
+    @CircuitBreaker(
+        key = "book_hot_rank", 
+        failureThreshold = 3, 
+        timeout = 30,
+        minRequestThreshold = 5
+    )
     public Result<List<BookInfo>> getHotRank() {
+        String cacheKey = "book:rank:hot";
+        List<BookInfo> cachedResult = cacheService.getListFromCache(cacheKey, BookInfo.class);
+        if (cachedResult != null) {
+            return Result.success(cachedResult);
+        }
+        
         LambdaQueryWrapper<BookInfo> query = new LambdaQueryWrapper<>();
         query.orderByDesc(BookInfo::getRatingCount)
                 .last("limit 10");
-        return Result.success(bookInfoService.list(query));
+        List<BookInfo> result = bookInfoService.list(query);
+        
+        // 缓存30分钟
+        cacheService.setListToCache(cacheKey, result, 30);
+        return Result.success(result);
     }
 
-    // 3. 新书榜 (Create Time 降序)
+    // 3. 新书榜 (Create Time 降序) - 带缓存
     @GetMapping("/rank/new")
+    @CircuitBreaker(
+        key = "book_new_rank", 
+        failureThreshold = 3, 
+        timeout = 30,
+        minRequestThreshold = 5
+    )
     public Result<List<BookInfo>> getNewRank() {
+        String cacheKey = "book:rank:new";
+        List<BookInfo> cachedResult = cacheService.getListFromCache(cacheKey, BookInfo.class);
+        if (cachedResult != null) {
+            return Result.success(cachedResult);
+        }
+        
         LambdaQueryWrapper<BookInfo> query = new LambdaQueryWrapper<>();
         query.orderByDesc(BookInfo::getCreateTime)
                 .last("limit 10");
-        return Result.success(bookInfoService.list(query));
+        List<BookInfo> result = bookInfoService.list(query);
+        
+        // 缓存30分钟
+        cacheService.setListToCache(cacheKey, result, 30);
+        return Result.success(result);
     }
 }

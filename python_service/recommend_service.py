@@ -11,7 +11,7 @@ app = Flask(__name__)
 # -------------------------
 # 1. 数据库配置
 # -------------------------
-DB_URI = 'mysql+pymysql://root:root@localhost:3306/book_rec_db?charset=utf8mb4'
+DB_URI = 'mysql+pymysql://root:123456@localhost:3306/book_rec_db?charset=utf8mb4'
 db_engine = create_engine(DB_URI)
 
 item_similarity_df = pd.DataFrame()

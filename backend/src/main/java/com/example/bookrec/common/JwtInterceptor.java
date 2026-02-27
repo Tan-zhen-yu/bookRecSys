@@ -15,25 +15,31 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        // 1. 从 Cookie 中提取 Token
-        Cookie[] cookies = request.getCookies();
-        String token = null;
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("auth_token".equals(cookie.getName())) {
-                    token = cookie.getValue();
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
+        // 1. 先尝试从 Header 中获取 token
+        String token = request.getHeader("token");
+
+        // 2. 如果 Header 里没有，再去 Cookie 里找（兼容老逻辑）
+        if (token == null || token.isEmpty()) {
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (Cookie cookie : cookies) {
+                    if ("auth_token".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                    }
                 }
             }
         }
 
-        // 2. 校验 Token
-        if (token == null || !jwtUtils.validateToken(token).isEmpty()) {
-            // 如果没有 Token 或校验失败，返回 401
+
+        if (token == null || jwtUtils.validateToken(token).isEmpty()) {
             response.setStatus(401);
             return false;
         }
 
-        // 3. 校验成功，放行
         return true;
     }
 }

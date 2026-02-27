@@ -18,6 +18,9 @@ public class InterceptorConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/user/login",
                         "/user/register",
+                        "/book/test/**",
+                        "/test/**",
+                        "/monitoring/**",
                         "/doc.html",                // Knife4j 文档地址
                         "/webjars/**",              // 静态资源
                         "/swagger-resources/**",    // Swagger 资源

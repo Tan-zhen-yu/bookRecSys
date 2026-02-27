@@ -23,7 +23,9 @@
             <i class="el-icon-pie-chart"></i>
             <span slot="title">数据大屏</span>
           </el-menu-item>
-          
+          <el-menu-item index="/admin/monitoring">
+          <i class="el-icon-odometer"></i> <span slot="title">流量监控</span>
+        </el-menu-item>
           <el-menu-item index="/admin/user">
             <i class="el-icon-user-solid"></i>
             <span slot="title">用户管理</span>
@@ -94,6 +96,7 @@ export default {
     currentRouteName() {
       const map = {
         '/admin/dashboard': '数据大屏',
+        '/admin/monitoring': '流量监控', // 新增这一行
         '/admin/user': '用户管理',
         '/admin/book': '图书管理',
         '/admin/comment': '评论管理'

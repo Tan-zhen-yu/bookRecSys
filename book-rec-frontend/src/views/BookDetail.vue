@@ -25,6 +25,14 @@
                 立即阅读
               </el-button>
               <el-button 
+                type="success" 
+                icon="el-icon-shopping-cart-2" 
+                class="btn-buy"
+                round
+                @click="handleBuy">
+                购买图书 (￥{{ book.price || '0.00' }})
+              </el-button>
+              <el-button 
                 :type="isCollected ? 'warning' : 'default'" 
                 :icon="isCollected ? 'el-icon-star-on' : 'el-icon-star-off'" 
                 class="btn-collect"
@@ -61,7 +69,7 @@
                 <span class="meta-item"><i class="el-icon-office-building"></i> {{ book.publisher }}</span>
                 <span class="meta-divider">/</span>
                 <el-tag size="small" effect="plain" class="category-tag">
-                {{ categories.find(c => c.id === book.categoryId) ? categories.find(c => c.id === book.categoryId).name : '加载中...' }}
+                {{ getBookCategory() }}
               </el-tag>
               </div>
             </div>
@@ -215,32 +223,76 @@ export default {
     goToReader() {
   this.$router.push('/read/' + this.id);
 },
-    loadCategories() {
+ handleBuy() {
+    // 1. 登录校验
+    if (!this.user.id) {
+      this.$message.warning("请登录后再进行购买");
+      this.$router.push('/login');
+      return;
+    }
+
+    // 2. 支付前确认（提升用户体验，防止误触）
+    this.$confirm(`确定要购买《${this.book.title}》吗？`, '购买确认', {
+      confirmButtonText: '立即支付',
+      cancelButtonText: '取消',
+      type: 'info',
+      roundButton: true
+    }).then(() => {
+      // 3. 调用后端购买接口
+      // 新接口规范：POST /book/sell/sell，参数为 bookId 和 quantity
+      request.post("/book/sell/sell", {
+        bookId: this.id,
+        quantity: 1 // 购买数量，默认为1
+      }).then(res => {
+        if (res.code === 200) {
+          this.$message.success("购买成功！祝您阅读愉快");
+          // 购买成功后可以执行：刷新书籍状态（如变为已拥有）、直接跳转阅读等
+          this.loadDetail(); 
+        } else if (res.code === 400) {
+          // 处理库存不足等错误情况
+          this.$message.error(res.msg || "库存不足，购买失败");
+        } else if (res.code === 403) {
+          // 处理重复购买等错误情况
+          this.$message.error(res.msg || "您已经购买过此书");
+        } else {
+          // 其他错误情况
+          this.$message.error(res.msg || "购买失败，请稍后再试");
+        }
+      }).catch(err => {
+        console.error("购买请求异常", err);
+        this.$message.error("服务器繁忙");
+      });
+    }).catch(() => {
+      // 用户取消购买
+    });
+  },
+  resizeChart() {
+    if (this.chartInstance) this.chartInstance.resize();
+  },
+  addHistory() {
+    request.post("/history/add", {
+      userId: this.user.id,
+      bookId: this.id
+    });
+  },
+  loadCategories() {
     request.get("/category/list").then(res => {
       if (res.code == 200) {
         this.categories = res.data;
       }
     });
   },
-    resizeChart() {
-      if (this.chartInstance) this.chartInstance.resize();
-    },
-    addHistory() {
-        request.post("/history/add", {
-           userId: this.user.id,
-           bookId: this.id
-        });
-     },
-    checkCollection() {
-      if (!this.user.id) return;
-      request.get("/shelf/check", { params: { userId: this.user.id, bookId: this.id } }).then(res => {
-        if (res.code == 200) this.isCollected = res.data;
-      })
-    },
-    getMatchColor(score) {
+  getMatchColor(score) {
       if (score >= 90) return '#ff7675'; 
       if (score >= 80) return '#fab1a0'; 
       return '#74b9ff'; 
+    },
+    getBookCategory() {
+      if (!this.book.categoryId || this.categories.length === 0) {
+        return '未知分类';
+      }
+      const category = this.categories.find(c => c.id === this.book.categoryId);
+      return category ? category.name : '未知分类';
     },
     loadRelated() {
       request.get("/recommend/related/" + this.id).then(res => {
@@ -471,6 +523,26 @@ export default {
 .action-buttons .btn-collect:hover {
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* 购买按钮样式 - 确保与其他按钮对齐 */
+.action-buttons .btn-buy {
+  width: 100%;
+  margin: 0 !important; 
+  padding: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%) !important;
+  border: none !important;
+  color: white !important;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(67, 233, 123, 0.3);
+  transition: all 0.3s ease;
+}
+
+.action-buttons .btn-buy:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(67, 233, 123, 0.4);
 }
 
 /* ================= 4. 右侧内容面板 ================= */

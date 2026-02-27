@@ -47,6 +47,14 @@ const routes = [
         component: () => import('../views/admin/Dashboard.vue'),
         meta: { title: '数据大屏' }
       },
+     { 
+        // 1. 修改路径为 monitoring
+        path: 'monitoring', 
+        // 2. 修改名称为 Monitoring
+        name: 'Monitoring', 
+        component: () => import('../views/admin/MonitoringDashboard.vue'),
+        meta: { title: '流量监控' }
+      },
       { 
         path: 'user', 
         name: 'UserManage', 

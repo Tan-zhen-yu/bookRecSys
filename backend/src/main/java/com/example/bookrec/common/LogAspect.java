@@ -22,25 +22,29 @@ public class LogAspect {
     @Around("execution(* com.example.bookrec.controller..*.*(..))")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
-
-        // 获取请求信息
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        HttpServletRequest request = attributes.getRequest();
-
-        String url = request.getRequestURL().toString();
-        String method = request.getMethod();
         String methodName = joinPoint.getSignature().getName();
         Object[] args = joinPoint.getArgs();
 
-        logger.info("=== 请求开始: [{}] {} ===", method, url);
-        logger.info("方法: {}", methodName);
-        logger.info("参数: {}", Arrays.toString(args));
+        // 1. 尝试获取 HTTP 请求信息
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 
-        // 执行目标方法
+        if (attributes != null) {
+            // 是正常的 HTTP 请求
+            HttpServletRequest request = attributes.getRequest();
+            logger.info("=== 请求开始: [{}] {} ===", request.getMethod(), request.getRequestURL());
+            logger.info("方法: {}", methodName);
+            logger.info("参数: {}", Arrays.toString(args));
+        } else {
+            // 是非 HTTP 请求（比如我们的单元测试并发调用）
+
+        }
+
+        // 2. ⚡️ 核心：无论什么环境，都必须放行，执行真正的 Controller 方法！
         Object result = joinPoint.proceed();
 
+        // 3. 记录耗时并返回真正的结果
         long timeTaken = System.currentTimeMillis() - startTime;
-        logger.info("=== 请求结束: 耗时 {} ms ===", timeTaken);
+        logger.info("=== 执行结束: {} 耗时 {} ms ===", methodName, timeTaken);
 
         return result;
     }
