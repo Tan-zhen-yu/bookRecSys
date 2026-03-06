@@ -275,14 +275,13 @@ export default {
       bookId: this.id
     });
   },
-  loadCategories() {
-    request.get("/category/list").then(res => {
-      if (res.code == 200) {
-        this.categories = res.data;
-      }
+  checkCollection() {
+    if (!this.user.id) return;
+    request.get("/shelf/check", { params: { userId: this.user.id, bookId: this.id } }).then(res => {
+      if (res.code == 200) this.isCollected = res.data;
     });
   },
-  getMatchColor(score) {
+    getMatchColor(score) {
       if (score >= 90) return '#ff7675'; 
       if (score >= 80) return '#fab1a0'; 
       return '#74b9ff'; 
@@ -295,9 +294,20 @@ export default {
       return category ? category.name : '未知分类';
     },
     loadRelated() {
+      console.log('loadRelated called, id:', this.id);
       request.get("/recommend/related/" + this.id).then(res => {
-        if(res.code == 200) this.relatedBooks = res.data;
-      })
+        console.log('API response:', res);
+        if(res && res.code == 200) {
+          console.log('Setting relatedBooks:', res.data);
+          this.relatedBooks = res.data || [];
+        } else {
+          console.log('API returned error or no data');
+          this.relatedBooks = [];
+        }
+      }).catch(err => {
+        console.error('API call failed:', err);
+        this.relatedBooks = [];
+      });
     },
     goRelated(id) {
       this.$router.push("/book/" + id);

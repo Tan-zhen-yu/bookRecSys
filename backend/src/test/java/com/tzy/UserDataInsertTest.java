@@ -111,7 +111,7 @@ public  class UserDataInsertTest {
         // 第二次查询对照
         start = System.currentTimeMillis();
         userMapper.getIdOnly(name);
-        System.out.println("第二次查询（热数据）耗时：" + (System.currentTimeMillis() - start) + "ms");
+        System.out.println("第二次查询（热数据） 耗时：" + (System.currentTimeMillis() - start) + "ms");
         return;
     }
 
